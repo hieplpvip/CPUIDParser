@@ -9,6 +9,7 @@ uint32_t cpuModel {};
 uint32_t cpuStepping {};
 uint32_t cpuMaxLevel {};
 uint32_t cpuMaxLevelExt {0x80000000};
+uint32_t cpuBrand[12];
 
 bool getCpuid(uint32_t no, uint32_t count, uint32_t *a, uint32_t *b=nullptr, uint32_t *c=nullptr, uint32_t *d=nullptr) {
   uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
@@ -61,6 +62,13 @@ void parseCPUID() {
   if (cpuFamily == 15 || cpuFamily == 6)
     cpuModel |= ver.fmt.extendedModel << 4;
   cpuStepping = ver.fmt.stepping;
+
+  // Get CPU brand
+  if (cpuMaxLevelExt >= 0x80000004) {
+    getCpuid(0x80000002, 0, &cpuBrand[0], &cpuBrand[1], &cpuBrand[2], &cpuBrand[3]);
+    getCpuid(0x80000003, 0, &cpuBrand[4], &cpuBrand[5], &cpuBrand[6], &cpuBrand[7]);
+    getCpuid(0x80000004, 0, &cpuBrand[8], &cpuBrand[9], &cpuBrand[10], &cpuBrand[11]);
+  }
 
   // Last but not least detect CPU generation
   // Keep this mostly in sync to cpuid_set_cpufamily from osfmk/i386/cpuid.c
@@ -152,6 +160,10 @@ void printInfo() {
   // Only do extended model checking on supported Intel
   if (cpuVendor != CpuVendor::Intel || cpuMaxLevel < 1)
     return;
+
+  if (cpuMaxLevelExt >= 0x80000004) {
+    printf("CPU brand: %s\n", (char *)cpuBrand);
+  }
 
   printf("CPU family: %d\n", cpuFamily);
   printf("CPU model: %d\n", cpuModel);
